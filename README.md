@@ -39,12 +39,72 @@ Types of data stored in this object: expression matrix (genes vs. cells), metada
 An additional variable can be added when creating the Seurat object, known as, minimum features.  This will typically be 'min.features =200'.
 Why would we have a "minimum features" filter?  We use "minimum features" because low-quality cells or empty droplets will often have very few genes (features).
 We want to try to eliminate low quality cells. However, aberrantly high gene counts may be due to doublets and we can set the min.features <2,500. 
-To include "minimum features" filer:
+To include "minimum features" filter:
 ```r
 C1234 <- CreateSeuratObject(counts = CLL1234, project = "CLL1234", min.cells = 3, min.features = 200)
 # Then subset to keep cells with feature counts < 2,500
 C1234 <- subset(C1234, subset = nFeature_RNA > 200 & nFeature_RNA < 2500)
 ```
+
+Analyzing the amount of mitochondria in our sample.
+We calculate mitochondrial QC metrics with the PercentageFeatureSet() function, which calculates the percentage of counts originating from a set of features.
+We use the set of all genes starting with MT- as a set of mitochondrial genes.
+```r
+C1234[["percent.mt"]] <- PercentageFeatureSet(C1234, pattern = "^MT-")
+# Now we want to visualize the features, the counts and the percent of mitochondria.
+VlnPlot(C1234, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+# FeatureScatter is typically used to visualize feature-feature relationships, but can be used
+# for anything calculated by the object, i.e. columns in object metadata, PC scores etc.
+plot1 <- FeatureScatter(C1234, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(C1234, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+```
+Now we want to filter out cells that have > 10% mitochondrial counts.  This % will fluctuate depending on your stringency. Typical range is 5% to 20%.
+```r
+C1234 <- subset(C1234, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 10)
+
+# Normalize your data by a global-scaling normalization method “LogNormalize” that normalizes the feature expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.  Please note that the normalization method below assumes that each cell originally contains the same number of RNA molecules.  To avoid that assumption, use the SCTransform normalization function further below.
+
+C1234 <- NormalizeData(C1234)
+
+#SCTransform method
+SCTransform(
+  C1234,
+  assay = "RNA",
+  new.assay.name = "SCT",
+  reference.SCT.model = NULL,
+  do.correct.umi = TRUE,
+  ncells = 5000,
+  residual.features = NULL,
+  variable.features.n = 3000,
+  variable.features.rv.th = 1.3,
+  vars.to.regress = NULL,
+  do.scale = FALSE,
+  do.center = TRUE,
+  clip.range = c(-sqrt(x = ncol(x = object[[assay]])/30), sqrt(x = ncol(x =
+    object[[assay]])/30)),
+  vst.flavor = "v2",
+  conserve.memory = FALSE,
+  return.only.var.genes = TRUE,
+  seed.use = 1448145,
+  verbose = TRUE,
+  ...
+)
+```
+Next we want to find highly variable features that can help us focus on these specific genes for biological insights. 
+```r
+C1234 <- FindVariableFeatures(C1234, selection.method = "vst", nfeatures = 2000)
+
+# Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(C1234), 10)
+
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(C1234)
+plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1 + plot2
+```
+
 
 
 
