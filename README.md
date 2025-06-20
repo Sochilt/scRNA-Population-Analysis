@@ -4,6 +4,7 @@ The code is based around Seurat with addtional computational analysis for deeper
 This file is a sparse matrix file of gene expression data of a subset of barcodes identified as corresponding to actual cells.
 This is the file that stores gene expression counts based on UMIs (unique molecular identifiers).
 ```r
+# Call in necessary libraries that provide pre-written, reusable functions and tools to do job.
 library(dplyr)
 library(Seurat)
 library(patchwork)
