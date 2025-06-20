@@ -63,9 +63,13 @@ plot1 + plot2
 Now we want to filter out cells that have > 10% mitochondrial counts.  This % will fluctuate depending on your stringency. Typical range is 5% to 20%.
 ```r
 C1234 <- subset(C1234, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 10)
+```
 
-# Normalize your data by a global-scaling normalization method “LogNormalize” that normalizes the feature expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.  Please note that the normalization method below assumes that each cell originally contains the same number of RNA molecules.  To avoid that assumption, use the SCTransform normalization function further below.
+Normalize your data by a global-scaling normalization method “LogNormalize” that normalizes the feature expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.  
+Please note that the normalization method below assumes that each cell originally contains the same number of RNA molecules.  
+To avoid that assumption, use the SCTransform normalization function further below.
 
+```r
 C1234 <- NormalizeData(C1234)
 
 #SCTransform method
