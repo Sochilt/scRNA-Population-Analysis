@@ -3,6 +3,8 @@ The purpose of this analysis is to determine what populations are present, speci
 The code is based around Seurat with addtional computational analysis for deeper insights. File used for tertiary scRNA analysis is a filtered feature_bc_matrix file ('bc' stands for barcode). 
 This file is a sparse counts matrix file of gene expression data of a subset of barcodes identified as corresponding to actual cells.
 This is the file that stores gene expression counts based on UMIs (unique molecular identifiers).
+Go to https://satijalab.org/seurat/articles/pbmc3k_tutorial.html for the preliminary QC, pre-procossing and clustering code/information.
+scType for automated annotation of the clusters found below is offered by IanevskiAleksandr lab at https://github.com/IanevskiAleksandr/sc-type
 ```r
 # Call in necessary libraries that provide pre-written, reusable functions and tools to do job.
 library(dplyr)
@@ -130,7 +132,92 @@ When using Seurat and applying PCA to the scaled data, the first principal compo
 This will represent the modules of genes that exhibit either correlation (or anti-correlation) across single-cells in the data.
 ```r
 C1234 <- RunPCA(C1234, features = VariableFeatures(object = C1234))
+#Visualize the PCA results
+print(C1234[["pca"]], dims = 1:5, nfeatures = 5)
 ```
+```r
+VizDimLoading(C1234, dims = 1:2, reduction = "pca")
+```
+```r
+DimPlot(C1234, reduction = "pca") + NoLegend()
+```
+```r
+DimHeatmap(C1234, dims = 1, cells = 500, balanced = TRUE)
+```
+```r
+ElbowPlot(C1234)
+```
+Cluster the cells.
+Seurat offers a graph-based clustering, using the distance metric to drive the clustering analysis.
+Partitioning the cellular distance matrix into clusters by applying graph-based clustering appoaches.
+The method embeds the cells into a graph structure (K-nearest neighbor (KNN)) using the euclidean distance formula,
+with edges drawn between cells with similar feature expression patterns,
+it then attempts to partition this graph into highly interconnected "communities" or "clusters".
+To cluster the cells, we next apply modularity optimization techniques such as the Louvain algorithm (default) or SLM
+to iteratively group cells together.
+The 'FindClusters()' function implements this procedure with a resolution parameter that sets the
+granularity of the downstream clustering, with an increased number leading to increased clusters.
+Set the parameter between 0.4-1.2 for good results for scRNA data that has ~ 3K cells.
+Clusters can be found using Idents() function.
+```r
+C1234 <- FindNeighbors(C1234, dims = 1:10)
+C1234 <- FindClusters(C1234, resolution = 0.5)
+# Look at cluster IDs of the first 5 cells
+head(Idents(C1234), 5)
+```
+Now run non-linear dimensional reduction (UMAP/tSNE) on your dataset.
+The algorithm here shows underlying structure in the data, in order to place similar cells together.
+Cells grouped together within graph-based clusters determined from above should co-localize
+on the dimension reduction plots.
+```r
+C1234 <- RunUMAP(C1234c, dims = 1:10)
+# note that you can set `label = TRUE` or use the LabelClusters function to help label
+# individual clusters
+DimPlot(C1234, reduction = "umap")
+
+# find markers for every cluster compared to all remaining cells, report only the positive
+# ones
+C1234.markers <- FindAllMarkers(C1234, only.pos = TRUE)
+C1234.markers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1)
+
+```
+Below you can find markers that are just specific to partiuclar clusters of interest.
+For example, if you find that cluster 2 is the NK population you want to dive into:
+```r
+# find all markers of cluster 2
+cluster2.markers <- FindMarkers(C1234, ident.1 = 2)
+head(cluster2.markers, n = 5)
+
+# Or you want to find all markers that distinguish cluster 2 from clusters 0 and 1
+cluster2.markers <- FindMarkers(C1234, ident.1 = 2, ident.2 = c(0, 1))
+head(cluster2.markers, n = 5)
+```
+Make violin plots of features of interest.
+```r
+VlnPlot(C1234, features = c("MS4A1", "CD79A"))
+
+# Or make FeaturePlots of the various features of interest.
+# This is helpful when trying to identify the clusters in your data.
+
+FeaturePlot(C1234, features = c("MS4A1", "GNLY", "CD3E", "CD14", "FCER1A", "FCGR3A", "LYZ", "PPBP",
+    "CD8A"))
+```
+Now lets generate an expression heatmap of the top 20 markers for each cluster:
+```r
+C1234.markers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 10) %>%
+    ungroup() -> top10
+DoHeatmap(C1234, features = top10$gene) + NoLegend()
+```
+
+Now we are transitioning to the annotation of your clusters using scType.
+QC, normalization, pre-processing, scaling, dimensional reduction and clustering have all been completed.
+We want to identify clusters and then do population analysis on them.
+
 
 
 
