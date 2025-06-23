@@ -108,6 +108,30 @@ plot1 <- VariableFeaturePlot(C1234)
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
 plot1 + plot2
 ```
+Scaling the data is a linear transformation and standard in pre-processing prior to PCA.
+Scaling:
+  Shifts the expression of each gene, mean expression across cells is 0.
+  Scales the expression of each gene, variance across cells is 1.
+  Equal wight in downstream analyses, so that highly -expressed genes do not dominate
+Only variable features are scaled.
+You can specify the features argument to scale addition features:
+```r
+all.genes <-rownames(C1234)
+C1234 <- ScaleData(C1234, features = all.genes)
+```
+Linear Dimensional Reduction with Principle Component Analysis (PCA).
+First, what is linear dimensional reduction?
+  It is a linear algebra mathematical technique used to transform high-dimensional data into a lower-dimensional space.
+  It does this by typically finding a new set of axes (the principle components in PCA).
+  These new axes are linear combinations of the original features.
+  Purpose is to reduce complexity while aiming to retain key patterns or variance in the data. 
+PCA is used to reduce the number of features (genes or "dimensions") in the dataset while preserving as much information as possible.
+When using Seurat and applying PCA to the scaled data, the first principal components will output a list of genes with the most positive and ngative loadings.
+This will represent the modules of genes that exhibit either correlation (or anti-correlation) across single-cells in the data.
+```r
+C1234 <- RunPCA(C1234, features = VariableFeatures(object = C1234))
+```
+
 
 
 
