@@ -37,6 +37,35 @@ Types of data stored in this object: expression matrix (genes vs. cells), metada
 # Creating the Seurat object.
 > C1234 <- CreateSeuratObject(counts = CLL1234, project = "CLL1234", min.cells = 3)
 ```
+Consider if you have multiple samples in your project and you are looking at differences between timepoint 1 and timepoint 2.
+If you have 5 samples in timepoint 1 and the same 5 samples in timepoint 2,
+merge the files into TP1 and TP2 to do further analysis.
+
+```r
+TP1_merged <- merge(CLL111, 
+                    y = list(CLL222, CLL333, CLL444, CLL555), 
+                    add.cell.ids = c("CLL111", "CLL222", "CLL333", "CLL444", "CLL555"), 
+                    project = "TP1")
+
+# Merge Timepoint 2 samples into a single Seurat object
+TP2_merged <- merge(CLL111_2, 
+                    y = list(CLL222_2, CLL333_2, CLL444_2, CLL555_2), 
+                    add.cell.ids = c("CLL111_2", "CLL222_2", "CLL333_2", "CLL444_2", "CLL555_2"), 
+                    project = "TP2")
+
+# Add timepoint metadata
+TP1_merged$Timepoint <- "TP1"
+TP2_merged$Timepoint <- "TP2"
+
+# If you're planning to integrate or compare the two timepoints directly:
+
+combined <- merge(TP1_merged, y = TP2_merged, add.cell.ids = c("TP1", "TP2"), project = "CLL_combined")
+
+# You can proceed with integration, normalization, pca, clustering, etc.
+```
+
+```r
+# Plug in "combined" when you see "CLL1234" (or whatever you name directory) if you are running merged timepoints.
 
 An additional variable can be added when creating the Seurat object, known as, minimum features.  This will typically be 'min.features =200'.
 Why would we have a "minimum features" filter?  We use "minimum features" because low-quality cells or empty droplets will often have very few genes (features).
@@ -98,6 +127,71 @@ SCTransform(
   ...
 )
 ```
+Revisiting merged samples for timepoint analysis:
+```r
+# After you finish QC on combined datasets run the following:
+combined <- NormalizeData(combined)
+combined <- FindVariableFeatures(combined)
+combined <- ScaleData(combined)
+combined <- RunPCA(combined)
+combined <- RunUMAP(combined, dims = 1:20)
+combined <- FindNeighbors(combined, dims = 1:20)
+combined <- FindClusters(combined, resolution = 0.5)  # Adjust resolution as needed
+
+# Then run FeaturePlot to visualize marker expressions to identify the cluster of interest:
+FeaturePlot(combined, features = c("NKG7", "GNLY"))
+# Add cluster identities as metadata
+combined$cluster <- Idents(combined)
+
+# Create a table of counts, below assumes it was cluster 3 but whatever cluster you identify...
+table(combined$Timepoint[combined$cluster == 3])
+
+combined@meta.data %>%
+  filter(cluster == 3) %>%
+  count(Timepoint)
+
+# To visualize the proportion of TP1 vs TP2 cells in each cluster:
+library(ggplot2)
+
+cluster_time_counts <- combined@meta.data %>%
+  group_by(cluster, Timepoint) %>%
+  summarise(n = n()) %>%
+  mutate(percent = n / sum(n) * 100)
+
+ggplot(cluster_time_counts, aes(x = cluster, y = percent, fill = Timepoint)) +
+  geom_bar(stat = "identity", position = "fill") +
+  ylab("Proportion of Cells") +
+  theme_minimal()
+```
+
+For an actual cell count of a particular type of cell by timepoint, run the following:
+
+```r
+# Tag clusters
+combined$cluster <- Idents(combined)
+
+# Filter metadata for NK cluster and count by Timepoint
+nk_counts <- table(combined$Timepoint[combined$cluster == 3])
+
+# View result
+nk_counts
+```
+However, if the particular type of cells you are looking at are spread across multiple clusters
+or they're just not cleanly clustered (they usually aren't), then instead identify them 
+using canonical marker expression:
+```r
+# Example: tag cells expressing NK markers like NKG7 and GNLY
+nk_cells <- WhichCells(combined, expression = NKG7 > 1 & GNLY > 1)
+
+# Subset metadata for these cells
+nk_meta <- combined@meta.data[nk_cells, ]
+
+# Count by Timepoint
+table(nk_meta$Timepoint)
+
+# This approach ensures you're counting cells based on biology, not just clustering artifacts.
+```
+
 Next we want to find highly variable features that can help us focus on these specific genes for biological insights. 
 ```r
 C1234 <- FindVariableFeatures(C1234, selection.method = "vst", nfeatures = 2000)
