@@ -7,6 +7,7 @@ Go to https://satijalab.org/seurat/articles/pbmc3k_tutorial.html for the prelimi
 scType for automated annotation of the clusters found below is offered by IanevskiAleksandr lab at https://github.com/IanevskiAleksandr/sc-type
 
 ![UMAP plot](./Images/Annotated_Clusters.png)
+![UMAP plot](./Images/Sub_Clusters.png)
 
 ```r
 # Call in necessary libraries that provide pre-written, reusable functions and tools to do job.
