@@ -5,6 +5,9 @@ This file is a sparse counts matrix file of gene expression data of a subset of 
 This is the file that stores gene expression counts based on UMIs (unique molecular identifiers).
 Go to https://satijalab.org/seurat/articles/pbmc3k_tutorial.html for the preliminary QC, pre-procossing and clustering code/information.
 scType for automated annotation of the clusters found below is offered by IanevskiAleksandr lab at https://github.com/IanevskiAleksandr/sc-type
+
+![UMAP plot](images/Annotated_Clusters.png)
+
 ```r
 # Call in necessary libraries that provide pre-written, reusable functions and tools to do job.
 library(dplyr)
